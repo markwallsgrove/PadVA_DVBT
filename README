@@ -1,0 +1,61 @@
+
+ Pad Video Audio
+=================
+
+Pads all video and audio packets within MPEG2 Transport Stream with
+null data. This process results in a lightweight stream that can
+be recorded or routed to another network for testing purposes.
+
+After the packets have been compressed the data rate is between 1-2 Mbps. 
+The CPU usage on a Intel i5-2320 CPU @ 3.00GHz × 4 processor is utilised to around
+28% while replaying the BBC mux. RAM is barely touched.
+
+The pipeline is setup such as:
+ HOST: TV tuner -> mplayer -> pad_av -> gzip -> nc
+ CLIENT: nc -> gunzip -> DtPlay -> STB
+
+The host receives the DVB stream by using mplayer
+(with magic, see mplayer section), pads the video and audio packet 
+payloads with zeros, compresses, then sends to the client.
+
+The client receives the compresses TS packets, uncompresses, then
+pipes the content into DtPlay to be modulated.
+
+
+ Requires
+=================
+
+Python 2.7
+MPlayer SVN-r35920-4.7.2
+DtPlay 4.2.1
+
+
+ Example Setup
+=================
+
+ HOST: mplayer "dvb://allmega" -dumpstream -dumpfile /dev/stdout | ./pad_va | gzip | nc -l -p 3333
+ CLIENT: nc 192.168.19.246 3333 | gunzip | DtPlay /dev/stdin -l 0 -r 24128342 -t 215 -mt DVBT -mf 482 -mc 2/3 -mG 1/32 -mC QAM64 -m RAW
+
+
+ MPlayer
+=================
+
+MPlayer requires channels.cfg to be place in ~/.mplayer on the host.
+The magic refered to within the summary section is to do with the following
+line:
+
+allmega: .... :8192:8192:600
+
+8192 is a magic PID to requests that the full transport stream is sent
+to mplayer rather than a single channel.
+
+http://www.linuxtv.org/wiki/index.php/Multiple_programs
+
+
+ Testing
+=================
+
+Tested on a Intel i5-2320 CPU running Arch Linux,
+piping the BBC mux to another PC running Ubuntu.
+
+TV Tuner: AverMedia AverTV VolarHD (A835)

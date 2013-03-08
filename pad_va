@@ -1,0 +1,32 @@
+#!/usr/bin/env python2.7
+import sys
+import os
+import struct
+
+tuner = os.fdopen(sys.stdin.fileno(), 'rb', 0)
+output = os.fdopen(sys.stdout.fileno(), 'wb', 0)
+known_pids = set([0x0, 0x10, 0x11, 0x12, 0x14] + range(100, 8001, 100))
+padding = "\x00" * 184
+
+def align_stream():
+    while tuner.read(1) != 'G':
+        pass
+
+while True:
+    data = tuner.read(1)
+    if data[0] != 'G':
+        align_stream()
+    data = tuner.read(187)
+    high = ord(data[0]) & 0b00011111
+    low = ord(data[1])
+
+    pid = (high << 8) + low
+    if pid in known_pids:
+        output.write("G")
+        output.write(data)
+    else:
+        output.write("G")
+        output.write(data[:3])
+        output.write(padding)
+
+    output.flush()
